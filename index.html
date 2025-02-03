@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Essential for mobile responsiveness -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>ESP32 Motor Controller</title>
+  <!-- Bootstrap CSS from CDN -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header Navbar -->
+  <nav class="navbar navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">ESP32 Motor Controller</a>
+    <div>
+      <button id="connectButton" class="btn btn-outline-light mr-2">Connect</button>
+      <span id="connectionStatus" class="text-white">Disconnected</span>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container my-3">
+    <!-- Master Controls -->
+    <div class="card mb-3">
+      <div class="card-header">
+        Master Controls
+      </div>
+      <div class="card-body">
+        <div class="btn-group btn-group-lg d-flex" role="group">
+          <button id="masterStart" class="btn btn-success flex-fill">Start All</button>
+          <button id="masterStop" class="btn btn-danger flex-fill">Stop All</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Motors Grid -->
+    <div class="row">
+      <!-- Motor 1 -->
+      <div class="col-12 col-sm-6 mb-3">
+        <div class="card h-100">
+          <div class="card-header text-center">
+            Motor 1
+          </div>
+          <div class="card-body d-flex flex-column">
+            <div class="btn-group btn-group-lg d-flex mb-3" role="group">
+              <button class="btn btn-success motorStart flex-fill" data-motor="1">Start</button>
+              <button class="btn btn-danger motorStop flex-fill" data-motor="1">Stop</button>
+            </div>
+            <div class="form-group">
+              <label for="speedSlider1">Speed</label>
+              <input type="range" class="custom-range speedSlider" id="speedSlider1" min="0" max="100" value="50" data-motor="1">
+              <div class="text-center mt-2">
+                <span class="speedValue" data-motor="1">50%</span>
+              </div>
+            </div>
+            <div class="btn-group btn-group-lg d-flex" role="group">
+              <button class="btn btn-secondary adjustSpeed" data-motor="1" data-adjust="-5">-5%</button>
+              <button class="btn btn-secondary adjustSpeed" data-motor="1" data-adjust="5">+5%</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motor 2 -->
+      <div class="col-12 col-sm-6 mb-3">
+        <div class="card h-100">
+          <div class="card-header text-center">
+            Motor 2
+          </div>
+          <div class="card-body d-flex flex-column">
+            <div class="btn-group btn-group-lg d-flex mb-3" role="group">
+              <button class="btn btn-success motorStart flex-fill" data-motor="2">Start</button>
+              <button class="btn btn-danger motorStop flex-fill" data-motor="2">Stop</button>
+            </div>
+            <div class="form-group">
+              <label for="speedSlider2">Speed</label>
+              <input type="range" class="custom-range speedSlider" id="speedSlider2" min="0" max="100" value="50" data-motor="2">
+              <div class="text-center mt-2">
+                <span class="speedValue" data-motor="2">50%</span>
+              </div>
+            </div>
+            <div class="btn-group btn-group-lg d-flex" role="group">
+              <button class="btn btn-secondary adjustSpeed" data-motor="2" data-adjust="-5">-5%</button>
+              <button class="btn btn-secondary adjustSpeed" data-motor="2" data-adjust="5">+5%</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motor 3 -->
+      <div class="col-12 col-sm-6 mb-3">
+        <div class="card h-100">
+          <div class="card-header text-center">
+            Motor 3
+          </div>
+          <div class="card-body d-flex flex-column">
+            <div class="btn-group btn-group-lg d-flex mb-3" role="group">
+              <button class="btn btn-success motorStart flex-fill" data-motor="3">Start</button>
+              <button class="btn btn-danger motorStop flex-fill" data-motor="3">Stop</button>
+            </div>
+            <div class="form-group">
+              <label for="speedSlider3">Speed</label>
+              <input type="range" class="custom-range speedSlider" id="speedSlider3" min="0" max="100" value="50" data-motor="3">
+              <div class="text-center mt-2">
+                <span class="speedValue" data-motor="3">50%</span>
+              </div>
+            </div>
+            <div class="btn-group btn-group-lg d-flex" role="group">
+              <button class="btn btn-secondary adjustSpeed" data-motor="3" data-adjust="-5">-5%</button>
+              <button class="btn btn-secondary adjustSpeed" data-motor="3" data-adjust="5">+5%</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Motor 4 -->
+      <div class="col-12 col-sm-6 mb-3">
+        <div class="card h-100">
+          <div class="card-header text-center">
+            Motor 4
+          </div>
+          <div class="card-body d-flex flex-column">
+            <div class="btn-group btn-group-lg d-flex mb-3" role="group">
+              <button class="btn btn-success motorStart flex-fill" data-motor="4">Start</button>
+              <button class="btn btn-danger motorStop flex-fill" data-motor="4">Stop</button>
+            </div>
+            <div class="form-group">
+              <label for="speedSlider4">Speed</label>
+              <input type="range" class="custom-range speedSlider" id="speedSlider4" min="0" max="100" value="50" data-motor="4">
+              <div class="text-center mt-2">
+                <span class="speedValue" data-motor="4">50%</span>
+              </div>
+            </div>
+            <div class="btn-group btn-group-lg d-flex" role="group">
+              <button class="btn btn-secondary adjustSpeed" data-motor="4" data-adjust="-5">-5%</button>
+              <button class="btn btn-secondary adjustSpeed" data-motor="4" data-adjust="5">+5%</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications Area -->
+    <div class="alert alert-info text-center" role="alert" id="notificationArea">
+      Waiting for actions...
+    </div>
+  </div>
+
+  <!-- Bootstrap JS and dependencies (jQuery and Popper.js) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- Custom JS -->
+  <script src="app.js"></script>
+</body>
+</html>
