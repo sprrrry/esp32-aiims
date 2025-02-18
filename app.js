@@ -14,9 +14,30 @@ const connectionStatus = document.getElementById('connectionStatus');
 const logNotificationElem = document.getElementById('logNotification');
 const masterStart = document.getElementById('masterStart');
 const masterStop  = document.getElementById('masterStop');
+const masterSlider = document.getElementById('masterSlider');
+const masterSpeedValue = document.getElementById('masterSpeedValue');
+const masterAdjustMinus = document.getElementById('masterAdjustMinus');
+const masterAdjustPlus = document.getElementById('masterAdjustPlus');
 
-// Connect to the BLE device when the connect button is clicked.
+// Function to update all individual motor sliders in the UI and send a single global command.
+function updateAllMotors(globalValue) {
+  document.querySelectorAll('.speedSlider').forEach(slider => {
+    slider.value = globalValue;
+    const motorId = slider.getAttribute('data-motor');
+    document.querySelector(`.speedValue[data-motor="${motorId}"]`).textContent = `${globalValue}%`;
+    // Do not send individual motor commands here.
+  });
+  // Send only the global master slider command.
+  sendCommand(`A_S:${globalValue}`);
+}
+
+// Toggle connection: if connected, disconnect; if disconnected, connect.
 connectButton.addEventListener('click', async () => {
+  if (bleDevice && bleDevice.gatt.connected) {
+    updateLog('Disconnecting from device...');
+    bleDevice.gatt.disconnect();
+    return;
+  }
   try {
     updateLog('Requesting BLE device...');
     bleDevice = await navigator.bluetooth.requestDevice({
@@ -34,10 +55,10 @@ connectButton.addEventListener('click', async () => {
     updateLog('Getting characteristic...');
     bleCharacteristic = await bleService.getCharacteristic(CHARACTERISTIC_UUID);
     
-    // Update connection status badge
     connectionStatus.textContent = 'Connected';
     connectionStatus.classList.remove('bg-danger');
     connectionStatus.classList.add('bg-success');
+    connectButton.textContent = 'Disconnect';
     updateLog('Connected to device!');
   } catch (error) {
     console.error('Error:', error);
@@ -50,6 +71,7 @@ function onDisconnected() {
   connectionStatus.textContent = 'Disconnected';
   connectionStatus.classList.remove('bg-success');
   connectionStatus.classList.add('bg-danger');
+  connectButton.textContent = 'Connect';
   updateLog('Device disconnected.');
 }
 
@@ -59,7 +81,7 @@ function updateLog(message) {
   console.log(message);
 }
 
-// Send command over BLE
+// Send command over BLE with optimized commands.
 async function sendCommand(command) {
   if (!bleCharacteristic) {
     updateLog('Not connected to a BLE device.');
@@ -77,32 +99,19 @@ async function sendCommand(command) {
   }
 }
 
-// Event listeners for individual motor Start/Stop buttons
-document.querySelectorAll('.motorStart').forEach(button => {
-  button.addEventListener('click', () => {
-    const motorId = button.getAttribute('data-motor');
-    sendCommand(`MOTOR_${motorId}_START`);
-  });
-});
-
-document.querySelectorAll('.motorStop').forEach(button => {
-  button.addEventListener('click', () => {
-    const motorId = button.getAttribute('data-motor');
-    sendCommand(`MOTOR_${motorId}_STOP`);
-  });
-});
-
-// Event listeners for the speed sliders
+// For individual motor sliders: update display on input; send command on change.
 document.querySelectorAll('.speedSlider').forEach(slider => {
   slider.addEventListener('input', (event) => {
     const motorId = event.target.getAttribute('data-motor');
-    const value = event.target.value;
-    document.querySelector(`.speedValue[data-motor="${motorId}"]`).textContent = `${value}%`;
-    sendCommand(`MOTOR_${motorId}_SPEED:${value}`);
+    document.querySelector(`.speedValue[data-motor="${motorId}"]`).textContent = `${event.target.value}%`;
+  });
+  slider.addEventListener('change', (event) => {
+    const motorId = event.target.getAttribute('data-motor');
+    sendCommand(`M${motorId}_S:${event.target.value}`);
   });
 });
 
-// Event listeners for the adjust speed buttons (+/- 5%)
+// Adjust speed buttons for individual motors.
 document.querySelectorAll('.adjustSpeed').forEach(button => {
   button.addEventListener('click', () => {
     const motorId = button.getAttribute('data-motor');
@@ -113,15 +122,55 @@ document.querySelectorAll('.adjustSpeed').forEach(button => {
     newValue = Math.max(0, Math.min(100, newValue));
     slider.value = newValue;
     document.querySelector(`.speedValue[data-motor="${motorId}"]`).textContent = `${newValue}%`;
-    sendCommand(`MOTOR_${motorId}_SPEED:${newValue}`);
+    sendCommand(`M${motorId}_S:${newValue}`);
   });
 });
 
-// Event listeners for the master start/stop buttons
-masterStart.addEventListener('click', () => {
-  sendCommand('ALL_START');
+// Global Master Slider with debounce for smooth sliding.
+let masterSliderTimeout;
+masterSlider.addEventListener('input', (event) => {
+  masterSpeedValue.textContent = `${event.target.value}%`;
+  clearTimeout(masterSliderTimeout);
+  masterSliderTimeout = setTimeout(() => {
+    updateAllMotors(event.target.value);
+  }, 200);
 });
 
+// ±5% buttons for Master Speed.
+masterAdjustMinus.addEventListener('click', () => {
+  let currentValue = parseInt(masterSlider.value, 10);
+  let newValue = Math.max(0, currentValue - 5);
+  masterSlider.value = newValue;
+  masterSpeedValue.textContent = `${newValue}%`;
+  updateAllMotors(newValue);
+});
+
+masterAdjustPlus.addEventListener('click', () => {
+  let currentValue = parseInt(masterSlider.value, 10);
+  let newValue = Math.min(100, currentValue + 5);
+  masterSlider.value = newValue;
+  masterSpeedValue.textContent = `${newValue}%`;
+  updateAllMotors(newValue);
+});
+
+// Event listeners for individual motor Start/Stop buttons.
+document.querySelectorAll('.motorStart').forEach(button => {
+  button.addEventListener('click', () => {
+    const motorId = button.getAttribute('data-motor');
+    sendCommand(`M${motorId}_START`);
+  });
+});
+document.querySelectorAll('.motorStop').forEach(button => {
+  button.addEventListener('click', () => {
+    const motorId = button.getAttribute('data-motor');
+    sendCommand(`M${motorId}_STOP`);
+  });
+});
+
+// Event listeners for the master start/stop buttons.
+masterStart.addEventListener('click', () => {
+  sendCommand('A_START');
+});
 masterStop.addEventListener('click', () => {
-  sendCommand('ALL_STOP');
+  sendCommand('A_STOP');
 });

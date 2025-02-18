@@ -11,11 +11,11 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Header with three sections: Brand, Log Notification (centered), and Connect/Status -->
+  <!-- Header with three sections: Brand (left), Log (center), and Connect/Status (right) -->
   <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid d-flex justify-content-between align-items-center">
       <!-- Left: Brand -->
-      <div class="d-flex align-items-center">
+      <div>
         <a class="navbar-brand" href="#">ESP32 Motor Controller</a>
       </div>
       <!-- Center: Log Notification -->
@@ -32,18 +32,32 @@
   
   <!-- Main Content -->
   <div class="container my-4">
-    <!-- Master Controls Card -->
+    <!-- Master Controls Card (with Master Speed slider and ± buttons) -->
     <div class="card shadow-sm mb-4">
       <div class="card-header">Master Controls</div>
       <div class="card-body">
-        <div class="btn-group btn-group-lg w-100" role="group">
+        <!-- Master Start/Stop Buttons -->
+        <div class="btn-group btn-group-lg w-100 mb-3" role="group">
           <button id="masterStart" class="btn btn-success">Start All</button>
           <button id="masterStop" class="btn btn-danger">Stop All</button>
+        </div>
+        <!-- Master Speed Slider -->
+        <div class="mb-3">
+          <label for="masterSlider" class="form-label">Master Speed</label>
+          <input type="range" class="form-range" id="masterSlider" min="0" max="100" value="50">
+          <div class="text-center mt-2">
+            <span id="masterSpeedValue">50%</span>
+          </div>
+        </div>
+        <!-- ±5% Buttons for Master Speed -->
+        <div class="btn-group btn-group-lg w-100" role="group">
+          <button id="masterAdjustMinus" class="btn btn-secondary">-5%</button>
+          <button id="masterAdjustPlus" class="btn btn-secondary">+5%</button>
         </div>
       </div>
     </div>
     
-    <!-- Motor Control Cards -->
+    <!-- Individual Motor Control Cards -->
     <div class="row">
       <!-- Motor 1 -->
       <div class="col-12 col-md-6 col-lg-3 mb-4">
@@ -140,6 +154,7 @@
           </div>
         </div>
       </div>
+      
     </div>
   </div>
 
