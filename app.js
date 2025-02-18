@@ -11,54 +11,58 @@ const CHARACTERISTIC_UUID = '00001234-0000-1000-8000-00805f9b34fb';
 // DOM Elements
 const connectButton = document.getElementById('connectButton');
 const connectionStatus = document.getElementById('connectionStatus');
-const notificationArea = document.getElementById('notificationArea');
-
+const logNotificationElem = document.getElementById('logNotification');
 const masterStart = document.getElementById('masterStart');
 const masterStop  = document.getElementById('masterStop');
 
 // Connect to the BLE device when the connect button is clicked.
 connectButton.addEventListener('click', async () => {
   try {
-    logNotification('Requesting BLE device...');
+    updateLog('Requesting BLE device...');
     bleDevice = await navigator.bluetooth.requestDevice({
       filters: [{ services: [SERVICE_UUID] }]
     });
     
     bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
-
-    logNotification('Connecting to GATT Server...');
+    
+    updateLog('Connecting to GATT Server...');
     bleServer = await bleDevice.gatt.connect();
-
-    logNotification('Getting service...');
+    
+    updateLog('Getting service...');
     bleService = await bleServer.getPrimaryService(SERVICE_UUID);
-
-    logNotification('Getting characteristic...');
+    
+    updateLog('Getting characteristic...');
     bleCharacteristic = await bleService.getCharacteristic(CHARACTERISTIC_UUID);
-
+    
+    // Update connection status badge
     connectionStatus.textContent = 'Connected';
-    logNotification('Connected to device!');
+    connectionStatus.classList.remove('bg-danger');
+    connectionStatus.classList.add('bg-success');
+    updateLog('Connected to device!');
   } catch (error) {
     console.error('Error:', error);
-    logNotification('Connection failed: ' + error);
+    updateLog('Connection failed: ' + error);
   }
 });
 
 // Handle disconnection
 function onDisconnected() {
   connectionStatus.textContent = 'Disconnected';
-  logNotification('Device disconnected.');
+  connectionStatus.classList.remove('bg-success');
+  connectionStatus.classList.add('bg-danger');
+  updateLog('Device disconnected.');
 }
 
-// Helper function to log notifications
-function logNotification(message) {
-  notificationArea.textContent = message;
+// Update the log notification in the header
+function updateLog(message) {
+  logNotificationElem.textContent = 'Log: ' + message;
   console.log(message);
 }
 
 // Send command over BLE
 async function sendCommand(command) {
   if (!bleCharacteristic) {
-    logNotification('Not connected to a BLE device.');
+    updateLog('Not connected to a BLE device.');
     return;
   }
   try {
@@ -66,10 +70,10 @@ async function sendCommand(command) {
     const encoder = new TextEncoder();
     const commandArray = encoder.encode(command);
     await bleCharacteristic.writeValue(commandArray);
-    logNotification('Command sent: ' + command);
+    updateLog('Command sent: ' + command);
   } catch (error) {
     console.error('Error sending command:', error);
-    logNotification('Error sending command: ' + error);
+    updateLog('Error sending command: ' + error);
   }
 }
 
@@ -77,7 +81,6 @@ async function sendCommand(command) {
 document.querySelectorAll('.motorStart').forEach(button => {
   button.addEventListener('click', () => {
     const motorId = button.getAttribute('data-motor');
-    // Example command: "MOTOR_1_START"
     sendCommand(`MOTOR_${motorId}_START`);
   });
 });
@@ -85,7 +88,6 @@ document.querySelectorAll('.motorStart').forEach(button => {
 document.querySelectorAll('.motorStop').forEach(button => {
   button.addEventListener('click', () => {
     const motorId = button.getAttribute('data-motor');
-    // Example command: "MOTOR_1_STOP"
     sendCommand(`MOTOR_${motorId}_STOP`);
   });
 });
@@ -95,9 +97,7 @@ document.querySelectorAll('.speedSlider').forEach(slider => {
   slider.addEventListener('input', (event) => {
     const motorId = event.target.getAttribute('data-motor');
     const value = event.target.value;
-    // Update the displayed speed value
     document.querySelector(`.speedValue[data-motor="${motorId}"]`).textContent = `${value}%`;
-    // Send speed command (assumes motor is running or that the firmware accepts speed changes while stopped)
     sendCommand(`MOTOR_${motorId}_SPEED:${value}`);
   });
 });
@@ -119,11 +119,9 @@ document.querySelectorAll('.adjustSpeed').forEach(button => {
 
 // Event listeners for the master start/stop buttons
 masterStart.addEventListener('click', () => {
-  // Example command: "ALL_START" (firmware should start all motors)
   sendCommand('ALL_START');
 });
 
 masterStop.addEventListener('click', () => {
-  // Example command: "ALL_STOP" (firmware should stop all motors)
   sendCommand('ALL_STOP');
 });

@@ -1,33 +1,53 @@
 /* styles.css */
 
-/* Increase touch target size and spacing for mobile */
-.btn-lg {
-    padding: 0.75rem 1.25rem;
-    font-size: 1.125rem;
+/* Use a plain white background */
+body {
+  background-color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navbar brand styling */
+.navbar-brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Card design enhancements */
+.card {
+  border: none;
+  border-radius: 1rem;
+}
+.card-header {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+/* Increase button sizes for better touch targets */
+.btn-group-lg .btn {
+  padding: 0.75rem 1.25rem;
+  font-size: 1.125rem;
+}
+
+/* Style the range slider thumb for improved touch accuracy */
+input[type="range"].form-range::-webkit-slider-thumb {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #0d6efd;
+}
+
+/* Style the connection status badge and log notification */
+#connectionStatus {
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+#logNotification {
+  font-size: 0.9rem;
+}
+
+/* Extra spacing for mobile devices */
+@media (max-width: 576px) {
+  .card-body {
+    padding: 1rem;
   }
-  
-  /* Make the slider thumb larger for better touch accuracy */
-  .custom-range::-webkit-slider-thumb {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-  }
-  
-  /* Adjust spacing for cards on mobile devices */
-  .card {
-    margin-bottom: 1rem;
-  }
-  
-  /* Center and increase the notification text */
-  #notificationArea {
-    font-size: 1.1rem;
-    margin-top: 1rem;
-  }
-  
-  /* Optional: extra padding on small screens */
-  @media (max-width: 576px) {
-    .card-body {
-      padding: 1rem;
-    }
-  }
-  
+}
