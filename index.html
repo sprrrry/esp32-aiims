@@ -11,15 +11,16 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Header with three sections: Brand (left), Log (center), and Connect/Status (right) -->
+  <!-- Header with Brand (left), DeviceID + Log (center), and Connect/Status (right) -->
   <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid d-flex justify-content-between align-items-center">
       <!-- Left: Brand -->
       <div>
         <a class="navbar-brand" href="#">ESP32 Motor Controller</a>
       </div>
-      <!-- Center: Log Notification -->
+      <!-- Center: DeviceID + Log Notification -->
       <div class="text-center flex-grow-1">
+        <span id="deviceId" class="text-white small me-3">DeviceID: --</span>
         <span id="logNotification" class="text-white small">Log: Ready</span>
       </div>
       <!-- Right: Connect Button and Status -->
@@ -154,7 +155,27 @@
           </div>
         </div>
       </div>
-      
+    </div>
+    
+    <!-- Preset Form Card -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">Save Preset</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label for="presetName" class="form-label">Preset Name</label>
+          <input type="text" id="presetName" class="form-control" placeholder="MyPreset1">
+        </div>
+        <button id="savePresetBtn" class="btn btn-primary">Save Preset</button>
+      </div>
+    </div>
+    
+    <!-- Load Presets Card -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header">Load Presets</div>
+      <div class="card-body">
+        <button id="loadPresetsBtn" class="btn btn-info mb-3">Load Presets</button>
+        <div id="presetList" class="list-group"></div>
+      </div>
     </div>
   </div>
 

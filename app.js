@@ -8,30 +8,37 @@ let bleCharacteristic = null;
 const SERVICE_UUID = '0000abcd-0000-1000-8000-00805f9b34fb';
 const CHARACTERISTIC_UUID = '00001234-0000-1000-8000-00805f9b34fb';
 
+// Replace with your deployed Google Apps Script WebApp URL
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzBqdgfSzAKwHx0vEfZnnNVHFefQA-UpPcMwmw7_mzViLyrvdbL6enGso6qFPwGldmsTw/exec';
+
 // DOM Elements
 const connectButton = document.getElementById('connectButton');
 const connectionStatus = document.getElementById('connectionStatus');
 const logNotificationElem = document.getElementById('logNotification');
+const deviceIdElem = document.getElementById('deviceId');
 const masterStart = document.getElementById('masterStart');
 const masterStop  = document.getElementById('masterStop');
 const masterSlider = document.getElementById('masterSlider');
 const masterSpeedValue = document.getElementById('masterSpeedValue');
 const masterAdjustMinus = document.getElementById('masterAdjustMinus');
 const masterAdjustPlus = document.getElementById('masterAdjustPlus');
+const savePresetBtn = document.getElementById('savePresetBtn');
+const presetNameInput = document.getElementById('presetName');
+const loadPresetsBtn = document.getElementById('loadPresetsBtn');
+const presetList = document.getElementById('presetList');
 
-// Function to update all individual motor sliders in the UI and send a single global command.
+// --- 1) Update Master Sliders (UI Only) & Send Global Command ---
 function updateAllMotors(globalValue) {
   document.querySelectorAll('.speedSlider').forEach(slider => {
     slider.value = globalValue;
     const motorId = slider.getAttribute('data-motor');
     document.querySelector(`.speedValue[data-motor="${motorId}"]`).textContent = `${globalValue}%`;
-    // Do not send individual motor commands here.
   });
-  // Send only the global master slider command.
+  // Send global master slider command
   sendCommand(`A_S:${globalValue}`);
 }
 
-// Toggle connection: if connected, disconnect; if disconnected, connect.
+// --- 2) BLE Connect/Disconnect ---
 connectButton.addEventListener('click', async () => {
   if (bleDevice && bleDevice.gatt.connected) {
     updateLog('Disconnecting from device...');
@@ -55,6 +62,8 @@ connectButton.addEventListener('click', async () => {
     updateLog('Getting characteristic...');
     bleCharacteristic = await bleService.getCharacteristic(CHARACTERISTIC_UUID);
     
+    // Use bleDevice.id as a unique identifier for display
+    deviceIdElem.textContent = 'DeviceID: ' + (bleDevice.id || 'Unknown');
     connectionStatus.textContent = 'Connected';
     connectionStatus.classList.remove('bg-danger');
     connectionStatus.classList.add('bg-success');
@@ -66,22 +75,22 @@ connectButton.addEventListener('click', async () => {
   }
 });
 
-// Handle disconnection
 function onDisconnected() {
   connectionStatus.textContent = 'Disconnected';
   connectionStatus.classList.remove('bg-success');
   connectionStatus.classList.add('bg-danger');
   connectButton.textContent = 'Connect';
+  deviceIdElem.textContent = 'DeviceID: --';
   updateLog('Device disconnected.');
 }
 
-// Update the log notification in the header
+// --- 3) Logging Helper ---
 function updateLog(message) {
   logNotificationElem.textContent = 'Log: ' + message;
   console.log(message);
 }
 
-// Send command over BLE with optimized commands.
+// --- 4) Send BLE Command ---
 async function sendCommand(command) {
   if (!bleCharacteristic) {
     updateLog('Not connected to a BLE device.');
@@ -99,7 +108,7 @@ async function sendCommand(command) {
   }
 }
 
-// For individual motor sliders: update display on input; send command on change.
+// --- 5) Individual Motor Sliders & Adjust Buttons ---
 document.querySelectorAll('.speedSlider').forEach(slider => {
   slider.addEventListener('input', (event) => {
     const motorId = event.target.getAttribute('data-motor');
@@ -111,7 +120,6 @@ document.querySelectorAll('.speedSlider').forEach(slider => {
   });
 });
 
-// Adjust speed buttons for individual motors.
 document.querySelectorAll('.adjustSpeed').forEach(button => {
   button.addEventListener('click', () => {
     const motorId = button.getAttribute('data-motor');
@@ -126,7 +134,7 @@ document.querySelectorAll('.adjustSpeed').forEach(button => {
   });
 });
 
-// Global Master Slider with debounce for smooth sliding.
+// --- 6) Master Slider with Debounce ---
 let masterSliderTimeout;
 masterSlider.addEventListener('input', (event) => {
   masterSpeedValue.textContent = `${event.target.value}%`;
@@ -136,7 +144,6 @@ masterSlider.addEventListener('input', (event) => {
   }, 200);
 });
 
-// ±5% buttons for Master Speed.
 masterAdjustMinus.addEventListener('click', () => {
   let currentValue = parseInt(masterSlider.value, 10);
   let newValue = Math.max(0, currentValue - 5);
@@ -144,7 +151,6 @@ masterAdjustMinus.addEventListener('click', () => {
   masterSpeedValue.textContent = `${newValue}%`;
   updateAllMotors(newValue);
 });
-
 masterAdjustPlus.addEventListener('click', () => {
   let currentValue = parseInt(masterSlider.value, 10);
   let newValue = Math.min(100, currentValue + 5);
@@ -153,7 +159,7 @@ masterAdjustPlus.addEventListener('click', () => {
   updateAllMotors(newValue);
 });
 
-// Event listeners for individual motor Start/Stop buttons.
+// --- 7) Individual Motor Start/Stop ---
 document.querySelectorAll('.motorStart').forEach(button => {
   button.addEventListener('click', () => {
     const motorId = button.getAttribute('data-motor');
@@ -167,10 +173,105 @@ document.querySelectorAll('.motorStop').forEach(button => {
   });
 });
 
-// Event listeners for the master start/stop buttons.
+// --- 8) Master Start/Stop ---
 masterStart.addEventListener('click', () => {
   sendCommand('A_START');
 });
 masterStop.addEventListener('click', () => {
   sendCommand('A_STOP');
 });
+
+// --- 9) Save Preset ---
+savePresetBtn.addEventListener('click', () => {
+  const presetName = presetNameInput.value.trim() || 'Untitled';
+  const deviceIdString = (bleDevice && bleDevice.id) ? bleDevice.id : 'NoDevice';
+  
+  const speeds = {};
+  document.querySelectorAll('.speedSlider').forEach(slider => {
+    const motorId = slider.getAttribute('data-motor');
+    speeds[motorId] = slider.value;
+  });
+  
+  savePresetToGoogleSheets(deviceIdString, presetName, speeds);
+});
+
+async function savePresetToGoogleSheets(deviceIdString, presetName, speeds) {
+  if (!GOOGLE_SHEET_URL) {
+    updateLog('No Google Sheet URL configured.');
+    return;
+  }
+  const data = {
+    deviceId: deviceIdString,
+    presetName: presetName,
+    speeds: speeds
+  };
+  try {
+    const response = await fetch(GOOGLE_SHEET_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    console.log('Google Sheets response:', result);
+    if (result.status === 'Success') {
+      updateLog('Preset saved successfully to Google Sheets.');
+    } else {
+      updateLog(`Error saving preset: ${result.message || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error('Error saving preset to Google Sheets:', error);
+    updateLog('Error saving preset to Google Sheets: ' + error);
+  }
+}
+
+
+
+
+// --- 10) Load Presets ---
+loadPresetsBtn.addEventListener('click', loadPresets);
+
+async function loadPresets() {
+  if (!GOOGLE_SHEET_URL) {
+    updateLog('No Google Sheet URL configured.');
+    return;
+  }
+  try {
+    const response = await fetch(GOOGLE_SHEET_URL);
+    const presets = await response.json();
+    console.log('Loaded presets:', presets);
+    displayPresetList(presets);
+    updateLog('Presets loaded.');
+  } catch (error) {
+    console.error('Error loading presets:', error);
+    updateLog('Error loading presets: ' + error);
+  }
+}
+
+function displayPresetList(presets) {
+  presetList.innerHTML = '';
+  if (!Array.isArray(presets) || presets.length === 0) {
+    presetList.innerHTML = '<div class="list-group-item">No presets found.</div>';
+    return;
+  }
+  presets.forEach(preset => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'list-group-item list-group-item-action';
+    item.textContent = `${preset.PresetName} (${preset.Timestamp})`;
+    item.addEventListener('click', () => {
+      loadPreset(preset);
+    });
+    presetList.appendChild(item);
+  });
+}
+
+function loadPreset(preset) {
+  ['1','2','3','4'].forEach(motorId => {
+    const speed = preset[`Motor${motorId}`] || 50;
+    const slider = document.querySelector(`.speedSlider[data-motor="${motorId}"]`);
+    const speedDisplay = document.querySelector(`.speedValue[data-motor="${motorId}"]`);
+    slider.value = speed;
+    speedDisplay.textContent = `${speed}%`;
+  });
+  updateLog(`Loaded preset "${preset.PresetName}"`);
+}
