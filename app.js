@@ -9,7 +9,7 @@ const SERVICE_UUID = '0000abcd-0000-1000-8000-00805f9b34fb';
 const CHARACTERISTIC_UUID = '00001234-0000-1000-8000-00805f9b34fb';
 
 // Replace with your deployed Google Apps Script WebApp URL
-const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzBqdgfSzAKwHx0vEfZnnNVHFefQA-UpPcMwmw7_mzViLyrvdbL6enGso6qFPwGldmsTw/exec';
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbznroOzyhN3eLb9ZDtKSG4dMLoyJfnty5iAVLWqMWZlk75aiIgoKIByFoLVDbKLpL8dqg/exec';
 
 // DOM Elements
 const connectButton = document.getElementById('connectButton');
@@ -22,23 +22,39 @@ const masterSlider = document.getElementById('masterSlider');
 const masterSpeedValue = document.getElementById('masterSpeedValue');
 const masterAdjustMinus = document.getElementById('masterAdjustMinus');
 const masterAdjustPlus = document.getElementById('masterAdjustPlus');
+
+// Preset form
 const savePresetBtn = document.getElementById('savePresetBtn');
 const presetNameInput = document.getElementById('presetName');
 const loadPresetsBtn = document.getElementById('loadPresetsBtn');
 const presetList = document.getElementById('presetList');
 
-// --- 1) Update Master Sliders (UI Only) & Send Global Command ---
+// === Helper Functions for Buttons with Loading Spinners ===
+function showLoading(buttonElem, loadingText) {
+  buttonElem.disabled = true;
+  buttonElem.innerHTML = `
+    ${loadingText}
+    <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+  `;
+}
+
+function hideLoading(buttonElem, originalText) {
+  buttonElem.disabled = false;
+  buttonElem.textContent = originalText;
+}
+
+// === 1) Update Master Sliders (UI Only) & Send Global Command ===
 function updateAllMotors(globalValue) {
   document.querySelectorAll('.speedSlider').forEach(slider => {
     slider.value = globalValue;
     const motorId = slider.getAttribute('data-motor');
     document.querySelector(`.speedValue[data-motor="${motorId}"]`).textContent = `${globalValue}%`;
   });
-  // Send global master slider command
+  // Send only the master slider command
   sendCommand(`A_S:${globalValue}`);
 }
 
-// --- 2) BLE Connect/Disconnect ---
+// === 2) BLE Connect/Disconnect ===
 connectButton.addEventListener('click', async () => {
   if (bleDevice && bleDevice.gatt.connected) {
     updateLog('Disconnecting from device...');
@@ -62,7 +78,7 @@ connectButton.addEventListener('click', async () => {
     updateLog('Getting characteristic...');
     bleCharacteristic = await bleService.getCharacteristic(CHARACTERISTIC_UUID);
     
-    // Use bleDevice.id as a unique identifier for display
+    // Display device ID
     deviceIdElem.textContent = 'DeviceID: ' + (bleDevice.id || 'Unknown');
     connectionStatus.textContent = 'Connected';
     connectionStatus.classList.remove('bg-danger');
@@ -84,13 +100,13 @@ function onDisconnected() {
   updateLog('Device disconnected.');
 }
 
-// --- 3) Logging Helper ---
+// === 3) Logging Helper ===
 function updateLog(message) {
   logNotificationElem.textContent = 'Log: ' + message;
   console.log(message);
 }
 
-// --- 4) Send BLE Command ---
+// === 4) Send BLE Command ===
 async function sendCommand(command) {
   if (!bleCharacteristic) {
     updateLog('Not connected to a BLE device.');
@@ -108,7 +124,7 @@ async function sendCommand(command) {
   }
 }
 
-// --- 5) Individual Motor Sliders & Adjust Buttons ---
+// === 5) Individual Motor Sliders & Adjust Buttons ===
 document.querySelectorAll('.speedSlider').forEach(slider => {
   slider.addEventListener('input', (event) => {
     const motorId = event.target.getAttribute('data-motor');
@@ -134,7 +150,7 @@ document.querySelectorAll('.adjustSpeed').forEach(button => {
   });
 });
 
-// --- 6) Master Slider with Debounce ---
+// === 6) Master Slider with Debounce ===
 let masterSliderTimeout;
 masterSlider.addEventListener('input', (event) => {
   masterSpeedValue.textContent = `${event.target.value}%`;
@@ -159,7 +175,7 @@ masterAdjustPlus.addEventListener('click', () => {
   updateAllMotors(newValue);
 });
 
-// --- 7) Individual Motor Start/Stop ---
+// === 7) Individual Motor Start/Stop ===
 document.querySelectorAll('.motorStart').forEach(button => {
   button.addEventListener('click', () => {
     const motorId = button.getAttribute('data-motor');
@@ -173,7 +189,7 @@ document.querySelectorAll('.motorStop').forEach(button => {
   });
 });
 
-// --- 8) Master Start/Stop ---
+// === 8) Master Start/Stop ===
 masterStart.addEventListener('click', () => {
   sendCommand('A_START');
 });
@@ -181,8 +197,9 @@ masterStop.addEventListener('click', () => {
   sendCommand('A_STOP');
 });
 
-// --- 9) Save Preset ---
-savePresetBtn.addEventListener('click', () => {
+// === 9) Save Preset (with loading spinner) ===
+savePresetBtn.addEventListener('click', async () => {
+  showLoading(savePresetBtn, 'Saving...');
   const presetName = presetNameInput.value.trim() || 'Untitled';
   const deviceIdString = (bleDevice && bleDevice.id) ? bleDevice.id : 'NoDevice';
   
@@ -192,7 +209,8 @@ savePresetBtn.addEventListener('click', () => {
     speeds[motorId] = slider.value;
   });
   
-  savePresetToGoogleSheets(deviceIdString, presetName, speeds);
+  await savePresetToGoogleSheets(deviceIdString, presetName, speeds);
+  hideLoading(savePresetBtn, 'Save Preset');
 });
 
 async function savePresetToGoogleSheets(deviceIdString, presetName, speeds) {
@@ -200,19 +218,26 @@ async function savePresetToGoogleSheets(deviceIdString, presetName, speeds) {
     updateLog('No Google Sheet URL configured.');
     return;
   }
+  
   const data = {
     deviceId: deviceIdString,
     presetName: presetName,
     speeds: speeds
   };
+  
   try {
     const response = await fetch(GOOGLE_SHEET_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      redirect: 'follow',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
       body: JSON.stringify(data)
     });
+
     const result = await response.json();
     console.log('Google Sheets response:', result);
+    
     if (result.status === 'Success') {
       updateLog('Preset saved successfully to Google Sheets.');
     } else {
@@ -224,11 +249,12 @@ async function savePresetToGoogleSheets(deviceIdString, presetName, speeds) {
   }
 }
 
-
-
-
-// --- 10) Load Presets ---
-loadPresetsBtn.addEventListener('click', loadPresets);
+// === 10) Load Presets (with loading spinner) ===
+loadPresetsBtn.addEventListener('click', async () => {
+  showLoading(loadPresetsBtn, 'Loading...');
+  await loadPresets();
+  hideLoading(loadPresetsBtn, 'Load Presets');
+});
 
 async function loadPresets() {
   if (!GOOGLE_SHEET_URL) {
@@ -257,7 +283,21 @@ function displayPresetList(presets) {
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'list-group-item list-group-item-action';
-    item.textContent = `${preset.PresetName} (${preset.Timestamp})`;
+    
+    // Show preset name, timestamp, and motor speeds
+    const m1 = preset.Motor1 || '0';
+    const m2 = preset.Motor2 || '0';
+    const m3 = preset.Motor3 || '0';
+    const m4 = preset.Motor4 || '0';
+
+    item.innerHTML = `
+      <strong>${preset.PresetName}</strong>
+      <small class="text-muted ms-2">(${preset.Timestamp})</small>
+      <br>
+      M1: ${m1}, M2: ${m2}, M3: ${m3}, M4: ${m4}
+    `;
+
+    // When clicked, load this preset
     item.addEventListener('click', () => {
       loadPreset(preset);
     });
@@ -266,6 +306,7 @@ function displayPresetList(presets) {
 }
 
 function loadPreset(preset) {
+  // Update sliders with the loaded preset speeds
   ['1','2','3','4'].forEach(motorId => {
     const speed = preset[`Motor${motorId}`] || 50;
     const slider = document.querySelector(`.speedSlider[data-motor="${motorId}"]`);
